@@ -35,13 +35,6 @@ jobs:
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # Read bucket name using environment-file method
-      - name: Get bucket name from terraform output
-        id: bucket
-        run: |
-          bucket=$(terraform output -raw bucket_name)
-          echo "bucket_name=$bucket" >> $GITHUB_ENV
-
       # Install gcloud CLI
       - name: Install gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
@@ -53,5 +46,5 @@ jobs:
       # Upload file
       - name: Upload file to GCS bucket
         run: |
-          echo "Uploading myfile.txt to gs://$bucket_name/"
-          gsutil cp myfile.txt gs://$bucket_name/
+          echo "Uploading myfile.txt to msb-sample-bucket-dec-01/"
+          gsutil cp myfile.txt gs://msb-sample-bucket-dec-01/
