@@ -8,42 +8,41 @@ on:
 
 jobs:
   terraform:
-    name: 'Terraform'
     runs-on: ubuntu-latest
-
     defaults:
       run:
         shell: bash
-        working-directory: .
 
     steps:
-      # Checkout code
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      # Setup Terraform
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v2
 
-      # Terraform Init
       - name: Terraform Init
         run: terraform init
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # Terraform Plan
       - name: Terraform Plan
         run: terraform plan
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # Terraform Apply
       - name: Terraform Apply
         run: terraform apply -auto-approve
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # Install Google Cloud CLI
+      # Read bucket name using environment-file method
+      - name: Get bucket name from terraform output
+        id: bucket
+        run: |
+          bucket=$(terraform output -raw bucket_name)
+          echo "bucket_name=$bucket" >> $GITHUB_ENV
+
+      # Install gcloud CLI
       - name: Install gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
@@ -51,9 +50,8 @@ jobs:
           service_account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
           export_default_credentials: true
 
-      # Upload file to GCS Bucket
+      # Upload file
       - name: Upload file to GCS bucket
         run: |
-          BUCKET_NAME=$(terraform output -raw bucket_name)
-          echo "Uploading notes.txt to $BUCKET_NAME ..."
-          gsutil cp myfile.txt gs://$BUCKET_NAME/
+          echo "Uploading myfile.txt to gs://$bucket_name/"
+          gsutil cp myfile.txt gs://$bucket_name/
