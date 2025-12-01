@@ -15,59 +15,46 @@ jobs:
         shell: bash
 
     steps:
-      # ----------------------------------------------------------------------
-      # CHECKOUT REPO
-      # ----------------------------------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # ----------------------------------------------------------------------
-      # SETUP TERRAFORM
-      # ----------------------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      # ----------------------------------------------------------------------
-      # TERRAFORM INIT
-      # ----------------------------------------------------------------------
       - name: Terraform Init
         run: terraform init
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # ----------------------------------------------------------------------
-      # TERRAFORM PLAN
-      # ----------------------------------------------------------------------
       - name: Terraform Plan
         run: terraform plan
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # ----------------------------------------------------------------------
-      # TERRAFORM APPLY
-      # ----------------------------------------------------------------------
       - name: Terraform Apply
         run: terraform apply -auto-approve
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
       # ----------------------------------------------------------------------
-      # AUTHENTICATE & INSTALL GCLOUD
+      # CORRECT GOOGLE AUTHENTICATION (REQUIRED)
+      # ----------------------------------------------------------------------
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      # ----------------------------------------------------------------------
+      # INSTALL GCLOUD (AUTH IS ALREADY DONE ABOVE)
       # ----------------------------------------------------------------------
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
-          export_default_credentials: true
 
-      # DEBUG: confirm authentication
       - name: Verify authentication
         run: gcloud auth list
 
-      # ----------------------------------------------------------------------
-      # UPLOAD FILE TO GCS BUCKET
-      # ----------------------------------------------------------------------
       - name: Upload file to GCS bucket
         run: |
           BUCKET="msb-sample-bucket-dec-01"
@@ -75,7 +62,7 @@ jobs:
           echo "Checking if bucket exists..."
           gsutil ls gs://$BUCKET || (echo "Bucket not found!" && exit 1)
 
-          echo "Uploading myfile.txt to bucket $BUCKET ..."
+          echo "Uploading myfile.txt..."
           gsutil cp myfile.txt gs://$BUCKET/
 
           echo "Upload completed!"
