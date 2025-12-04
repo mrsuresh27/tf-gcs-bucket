@@ -1,0 +1,70 @@
+name: Terraform CI (WIF)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    permissions:
+      id-token: write       # REQUIRED for WIF
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # ------------------------------------------------------------
+      # AUTHENTICATE USING WORKLOAD IDENTITY FEDERATION (NO KEY FILE)
+      # ------------------------------------------------------------
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/629423970153/locations/global/workloadIdentityPools/github-demo-pool/providers/github"
+          service_account: "github-wif@hip-runner-477914-h3.iam.gserviceaccount.com"
+          token_format: "access_token"
+
+      # Terraform needs ADC tokens, so no GOOGLE_CREDENTIALS env var anymore.
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      # ------------------------------------------------------------
+      # Install gcloud (auth already done above)
+      # ------------------------------------------------------------
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: "hip-runner-477914-h3"
+
+      - name: Verify authentication
+        run: gcloud auth list
+
+      - name: Upload file to GCS bucket
+        run: |
+          BUCKET="msb-sample-bucket-dec-01"
+
+          echo "Checking if bucket exists..."
+          gsutil ls gs://$BUCKET || (echo "Bucket not found!" && exit 1)
+
+          echo "Uploading myfile.txt..."
+          gsutil cp myfile.txt gs://$BUCKET/
+
+          echo "Upload completed!"
